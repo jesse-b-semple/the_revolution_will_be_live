@@ -88,7 +88,7 @@ Tested on wordpress.org installations and wordpress.com blogs.
 
 support = """
 <p><b><a href="%s/support.html">Support Wikileaks</a> and the <a href="https://www.eff.org/support">EFF</a></b></p>
-"""
+"""%cablegate_prefix 
 import zlib, base64
 therevolution  = ""
 therevolution_ = ""
