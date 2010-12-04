@@ -1,0 +1,26 @@
+Execute with -h to get full details.
+
+This will download the wikileaks cablegate dumps
+and then upload and sync your wordpress or other blogs
+This can all be done over Tor with the --proxy|-p flag
+
+Example output:
+http://jessebsemple.wordspress.com
+
+HOW TO HELP:
+Contributions welcome. Especially any additional blog
+API support, or other systems with APIS (google docs,
+facebook, anything on AMAZON). Translation of the
+documentation into additional languages also 
+appreciated.
+
+For bugs and updates see:
+https://github.com/jesse-b-semple/the_revolution_will_be_live
+Or post your bugs and patches to pastebin with the "cablegate"
+tag and I will be sure to seach for that tag regularly:
+
+If you are using a slow proxy and get this error try again a 
+few times:
+xml.parsers.expat.ExpatError: not well-formed (invalid token): line 1, column 4
+
+
