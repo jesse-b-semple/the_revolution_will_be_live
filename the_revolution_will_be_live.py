@@ -363,8 +363,8 @@ def main():
 		elif o in ("-c", "--cablegate"):
 			if a == "skip":
 				cablegateurl = False
-			else:
-				cablegateurl = a
+			elif a:
+				cablegateurl = a 
 		elif o in ("-x", "--proxy"):
 			proxyurl = a
 			proxy = {'http': proxyurl}
