@@ -131,10 +131,15 @@ def setup_blog():
 		blogid += 1
 		sys.exit(2)
 	# Find new refs that we do not have yet
-	for post in blog.get_recent_posts(10000000, blogid):
-		ref =  re.match(title_to_ref_re, post['title'])
-		if ref:
-			refs_online.update({ref.group(1): 1})
+	# use tag list with reference_id instead of full page dump
+	# faster
+	#for post in blog.get_recent_posts(10000000, blogid):
+	#	ref =  re.match(title_to_ref_re, post['title'])
+	#	if ref:
+	#		refs_online.update({ref.group(1): 1})
+	for tag in blog.get_tags(blogid):
+		refs_online.update({tag['name']: 1})
+
 	progress()
 	# check our category exists:
 	cats = blog.get_categories(blogid)
