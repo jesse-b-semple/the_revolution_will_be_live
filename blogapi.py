@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Based on pyblog but modified slightly to support http proxies
+
 
 """"
   Copyright 2008 Ritesh Nadhani. All Rights Reserved.
@@ -160,7 +160,7 @@ class MetaWeblog(Blog):
     def new_post(self, content, publish=True, blogid=1):
         """
         New post
-
+?
         Args:
             content = Dictionary containing post dat.
             Publish = Publish status.
@@ -227,6 +227,7 @@ class MetaWeblog(Blog):
         
         """Sets the new template value for templateType"""
         return self.execute("metaWeblog.setTemplate", self.appkey, blogid, self.username, self.password, template, templateType)        
+
         
 class WordPress(MetaWeblog):
     """
@@ -356,6 +357,11 @@ class WordPress(MetaWeblog):
         Data contains values as documented at http://codex.wordpress.org/XML-RPC_wp#wp.getCategories
         """
         return self.execute('wp.uploadFile', blogid, self.username, self.password, data)
+    def get_tags(self, blogid=1):
+        """
+        Get Tag list for blog
+        """
+        return self.execute('wp.getTags', blogid, self.username, self.password)
 
 class MovableType(MetaWeblog):
     """
