@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#  the_revolution_will_be_live v1
+#  the_revolution_will_be_live v2
 #  by Jesse B. Semple 
 #  This here will copy them cables from that foreigner to them
 #  beetnik blogs that kids love so much these days. I'm over 
@@ -11,7 +11,7 @@
 #  http://pastbin  and add a tag "cablegate"
 #  I will search for new posts with that tag regularly
 #
-VERSION=1
+VERSION=2
 
 import BeautifulSoup
 import blogapi as pyblog #based on pyblog but includes http proxy support
@@ -22,9 +22,10 @@ import urlparse
 import os, os.path
 import getopt, sys
 from getpass import getpass
+import datetime
 
 cablegateurl = "http://213.251.145.96/cablegate.html"
-cablegate_prefix = '://'.join(urlparse.urlsplit(cablegateurl)[0:2])
+cablegateurlroot = '://'.join(urlparse.urlsplit(cablegateurl)[0:2])
 user         = False
 password     = False
 blogrpcurl   = False
@@ -33,10 +34,8 @@ bloggetlist  = False
 blogtype     = "wordpress"
 proxyurl	 = None
 proxy        = None
-nodamnpoetry = False
-
-VERBOSE      = False
-idxdir 		 = "reldate" # need to match site url directory for index's
+proxycheck   = False
+indexdir	 = "reldate" # need to match site url directory for index's
 cabledir 	 = "cable"
 def usage():
 	print """%s v%s 
@@ -48,10 +47,7 @@ I will search for new posts with that tag regularly
 TODO: fix blogger support
 
 USAGE:
-<cmd> -upbc --user --password --blogrpc --cablegate
 
--v|--verbose	off by default, you probably want it on. Though
-                it interferes with the poet.
 -u|--user       Blog user
 -p|--password   Blog password (not recommended, will request
                 from prompt instead)
@@ -68,17 +64,21 @@ Optional:
                 updated cables. This will use the cables in
                 cables/ exclusively.
 -x|--proxy      http proxy (such as Tor)
--n|--nodamnpoetry  the poet is on by default.
+-y|--proxycheck Test the proxy settings against check.torproject.org
 
 Example using tor:
 <cmd> -u jessebsemple -b http://jessebsemple.wordpress.com/xmlrpc.php \\
-      -t wordpress -x http://localhost:8118 -v 
+      -x http://localhost:8118 -y  
 
 To use upload without syncing the cables (if you already downloaded
 them from bittorrent or another source) just copy the "cable" dir
 into the same directory you run the script from and execute:
 <cmd> -u jessebsemple -b http://jessebsemple.wordpress.com/xmlrpc.php \\
-      -t wordpress -x http://localhost:8118 -v -c skip
+      -x http://localhost:8118 -y -c skip
+
+Using a different mirror:
+<cmd> -u jessebsemple -b http://jessebsemple.wordpress.com/xmlrpc.php \\
+      -x http://localhost:8118 -y -c http://wikileaks.lu/cablegate.html
 
 NOTE: proxy only tested with HTTP (not HTTPS). Therefore do not give
 a https blog xmlrpc url or https for the cables, until further notice.
@@ -88,59 +88,206 @@ Tested on wordpress.org installations and wordpress.com blogs.
 
 support = """
 <p><b><a href="%s/support.html">Support Wikileaks</a> and the <a href="https://www.eff.org/support">EFF</a></b></p>
-"""%cablegate_prefix 
-import zlib, base64
-therevolution  = ""
-therevolution_ = ""
+"""%cablegateurlroot
 
-def progress(n=1):
-	if nodamnpoetry:
-		return
-	global therevolution
-	for i in range(0,n):
-		if len(therevolution) > 0:
-			print therevolution.pop()
-		else:
-			therevolution = therevolution_
-			print "\n\n"
-		
-def debug(string):
-	if VERBOSE:
-		print string
-
-# Check proxy
 def check_proxy():
-	print "\nVerifying proxy"
-	print "IP Before proxy use:"
-	print BeautifulSoup.BeautifulSoup(urllib.urlopen('http://checkip.dyndns.org', proxies=None).read()).html.body.string
-	print "After:"
-	print  BeautifulSoup.BeautifulSoup(urllib.urlopen('http://checkip.dyndns.org', proxies=proxy).read()).html.body.string
+	print "Verifying proxy"
+	print "IP without proxy:",
+	print BeautifulSoup.BeautifulSoup(urllib.urlopen('http://check.torproject.org/', proxies=None).read()).find('b').string
+	print "IP with proxy:",
+	print  BeautifulSoup.BeautifulSoup(urllib.urlopen('http://check.torproject.org/', proxies=proxy).read()).find('b').string
+#	sys.exit(2)
+
+def resolve_url(url, concaturl=None):
+	""" concaturl used to keep within the url directory context of caller """
+	if url[:7] in ('http://', 'HTTP://'):
+		return url
+	else:
+		if concaturl:
+			concat = urlparse.urljoin(cablegateurlroot, concaturl)
+			return urlparse.urljoin(concat, re.sub('^/*\.\./', '', url))
+		else:
+			return urlparse.urljoin(cablegateurlroot, re.sub('^/*\.\./', '', url))
+
+def url_to_relative_path(url):
+	path = urlparse.urlparse(url)[2]
+	return re.sub('^(/\.\./|\.\./|/)/*', '', path) #bleh
+
+def download_index_page_recursive(url, path):
+	""" path relative, url absolute """
+	if os.path.exists(path):
+		print "%s: have index already, assuming we skip"%path
+	else:
+		print "%s: getting index and storing locally"%path
+		html     = urllib.urlopen(url, data=None, proxies=proxy).read()
+		open(path, 'w').write(html)
+		#print "len",url,len(html)
+		soup     = BeautifulSoup.BeautifulSoup(html)
+		nextlink = soup.find('div', 'paginator').findAllNext('a')[-1]
+		nextlink = resolve_url(nextlink['href'], concaturl=url)
+		download_index_page_recursive(nextlink, url_to_relative_path(nextlink))
+def download_all_index_pages():
+	print "Downloading index by date released from %s"%cablegateurl
+	if not os.path.exists(indexdir):
+		os.mkdir(indexdir)
+	if not os.path.exists(cabledir):
+		os.mkdir(cabledir)
+	html  = urllib.urlopen(cablegateurl, proxies=proxy)
+	soup  = BeautifulSoup.BeautifulSoup(html.read())
+	html.close()
+	urls  = soup.findAll('a', {'href': re.compile(indexdir+'/.+')})
+	for url in urls:
+		url  = resolve_url(url['href'])
+		path = url_to_relative_path(url)	
+		download_index_page_recursive(url, path)
+
+def download_all_cables():
+	print "Getting latest cables"
+	cabledir_re = re.compile(cabledir+'/')
+	for index in os.listdir(indexdir): 
+		if index[-5:] != '.html':
+			continue
+		print "parsing index: %s"%index
+		path = os.path.join(indexdir,index)
+		soup = BeautifulSoup.BeautifulSoup(open(path).read())
+		cableurls = soup.findAll('a', {'href': cabledir_re})
+		for url in cableurls:
+			#print url['href'],
+			url  = resolve_url(url['href'])
+			#print url
+			path = url_to_relative_path(url)
+			if not os.path.exists(path):
+				print "downloading cable: %s (%s)"%(path, url)
+				html  = urllib.urlopen(url, proxies=proxy).read()
+				dir   = os.path.dirname(path)
+				if not os.path.exists(dir):
+					os.makedirs(dir)
+				open(path, 'w').write(html)
+			
+# Parse upload cables
+subject_re  = re.compile(".*(SUBJECT|Subject):\s*([^\n]*)", re.MULTILINE | re.DOTALL)
+ref_re      = re.compile(".*(REF|Ref):\s*([^\n]*)", re.MULTILINE | re.DOTALL)
+ref_re_simp = re.compile("REF:|Ref:", re.MULTILINE | re.DOTALL)
+tags_re     = re.compile('TAGS:|Tags:')
+tags2a_re   = re.compile('TAGS')
+tags2b_re   = re.compile(".*TAGS\s+([^\n]*)", re.MULTILINE | re.DOTALL)
+tags_link_re = re.compile('tag/')
+def parse_and_upload_cable(path):
+	html = open(path).read()
+	soup = BeautifulSoup.BeautifulSoup(html)
+	part1 = soup.find('pre')
+	if not part1:
+		print "ERROR: corrupt file. Delete and download again"
+		return
+	part2 = part1.findNext('pre')
+	if not part2:
+		print "ERROR: corrupt file. Delete and download again"
+		return
+
+	links = soup.find('table', { "class" : "cable" }).findAll('a')
+	reference_id 	= links[0].string.encode()
+	created 		= links[1].string.encode()
+	released 		= links[2].string.encode()
+	classification 	= links[3].string.encode()
+	origin 			= links[4].string.encode() 
+
+	created_time    = datetime.datetime.strptime(created, "%Y-%m-%d %H:%M")
+	released_time   = datetime.datetime.strptime(released, "%Y-%m-%d %H:%M")
+	
+	subject = ""
+	search = part2.find(text=subject_re)
+	if search:
+		search = re.sub('&#x000A;', "\n", search.string)
+		search = subject_re.match(search)
+		subject = reference_id +": "+ search.group(2)
+	if not subject:
+		subject = reference_id
+
+	ref = ""
+	search = part2.find(text=ref_re_simp)
+	if search:
+		ref = re.sub('&#x000A;', "\n", search.string)
+		ref = ref_re.match(ref).group(2)
+	# Tags can somtimes be referenced with "TAGS:" and links and
+	# in rare cases with "TAGS" without links
+	tags = []
+	tags_ = part2.find(text=tags_re)
+	if tags_:
+		# assuming all tags are linked with "TAGS:"
+		tags_ = tags_.findNextSiblings('a', {'href': tags_link_re})
+		for tag in tags_:
+			tags.append(tag.string.encode())
+	else:
+		# sometimes its just "TAGS"
+		tags_ = part2.find(text=tags2a_re)
+		if tags_:
+			tags_ = re.sub('&#x000A;', "\n", tags_)
+			tags_ = tags2b_re.match(tags_)
+			if tags_:
+				for tag in tags_.group(1).split(','):
+					tags.append(re.sub(" ", "", tag))
+
+	# Build post 	
+	keywords = tags
+	keywords.append(reference_id)
+	keywords.append(origin)
+	keywords.append(classification)
+	keywords.append('cablegate')
+	keywords.append('wikileaks')
+	post = {
+			'title': subject,
+			'description': support+part1.prettify()+part2.prettify(),
+			'dateCreated': created_time,
+			'categories': ['Cablegate'],
+			'mt_allow_pings': 1,
+			'mt_keywords': keywords,
+			}
+	id = blog.new_post(post, 1, blogid)
+	print "post id:",id
+
+def upload_cables():
+	print "Parsing and uploading new cables"
+	for root, dirs, files in os.walk(cabledir):
+		for file in files:
+			if file[-5:] == '.html' and not refs_online.has_key(file[:-5]):
+				print "uploading cable: %s"%os.path.join(root, file),
+				parse_and_upload_cable(os.path.join(root, file))
+
+def list_blogs():
+	print "Blog ID's available:"
+	i = 0
+	try:
+		blog = pyblog.WordPress(blogrpcurl, user, password, urlparse.urlparse(proxyurl)[1])
+	except Exception, err:
+		print str(err)
+		print
+		print "Error connecting to blog. If using a proxy, just try again a few times"
+		sys.exit(2)
+	for b in blog.get_users_blogs():
+		print "%d: %s"%(i, b['blogName'])
+		i += 1
+	sys.exit(2)
 
 # Setup blog connection
 title_to_ref_re = re.compile("^([^\:]+):")
 refs_online = {}
 def setup_blog():
+	print "Connecting to blog"
 	global blog, blogid
-	debug("\nConnecting to blog")
-	blog = pyblog.WordPress(blogrpcurl, user, password, urlparse.urlparse(proxyurl)[1])
-	progress()
-	# List blog ids and exit if requested:
-	if bloggetlist:
-		for b in blogs:
-			print "%d: %s"%(blogid, b['blogname'])
-		blogid += 1
+	try:
+		blog = pyblog.WordPress(blogrpcurl, user, password, urlparse.urlparse(proxyurl)[1])
+	except Exception, err:
+		print str(err)
+		print
+		print "Error connecting to blog. If using a proxy, just try again a few times"
 		sys.exit(2)
-	# Find new refs that we do not have yet
-	# use tag list with reference_id instead of full page dump
-	# faster
-	#for post in blog.get_recent_posts(10000000, blogid):
-	#	ref =  re.match(title_to_ref_re, post['title'])
-	#	if ref:
-	#		refs_online.update({ref.group(1): 1})
+
+
+	# what needs to be uploaded is determined if it's "reference_id" tag
+	# does not exist in refs_online
+	print "getting index of cables already uploaded to blog"
 	for tag in blog.get_tags(blogid):
 		refs_online.update({tag['name']: 1})
-
-	progress()
 	# check our category exists:
 	cats = blog.get_categories(blogid)
 	cablegatecat = {
@@ -154,197 +301,25 @@ def setup_blog():
 		if c['description'] == cablegatecat['name']:
 			havecat = True
 	if not havecat:
-		print "creating category"
+		print "creating '%s' category"%cablegatecat
 		blog.new_category(cablegatecat, blogid)
 
-	
-
-	
-def get_cables():
-	# Make dirs
-	if not os.path.exists(idxdir):
-		debug("creating index directory")
-		os.mkdir(idxdir)
-	if not os.path.exists(cabledir):
-		debug("creating cable directory")
-		os.mkdir(cabledir)
-	
-	
-	# get all root index files
-	debug("\nGetting latest primary index from %s"%cablegateurl)
-	progress()
-	html        = urllib.urlopen(cablegateurl, proxies=proxy).read()
-	soup        = BeautifulSoup.BeautifulSoup(html)
-	idxurls     = soup.findAll('a', {'href': re.compile('/'+idxdir+'/.+')})
-	for idx in idxurls:
-		if os.path.exists(idx['href'][1:]):
-			debug("%s: got it, assuming we skip"%idx['href'])
-		else:
-			debug("%s: getting and storing locally"%idx['href'])
-			idxhtml = urllib.urlopen(cablegate_prefix+idx['href'], proxies=proxy).read()
-			f = open(idx['href'][1:], 'w')
-			f.write(idxhtml)
-			f.close()
-			progress()
-	
-	# get pagenated index's within if we dont have them
-def get_pages(pageurl):
-	debug("\nGetting latest pagenated index's")
-	if os.path.exists(pageurl[1:]):
-		debug("%s: got it, assuming we skip"%pageurl)
-	else:
-		debug("%s: getting and storing locally"%pageurl)
-		html = urllib.urlopen(cablegate_prefix+pageurl, proxies=proxy).read()
-		open(pageurl[1:], 'w').write(html)
-		soup = BeautifulSoup.BeautifulSoup(html)
-		nextlink = soup.find('div', 'paginator').findAllNext('a')[-1]
-		get_pages(nextlink['href'])	
-		progress()
-	
-	for idx in idxurls:
-		soup = BeautifulSoup.BeautifulSoup(open(idx['href'][1:]).read())
-		nextlink = soup.find('div', 'paginator').findAllNext('a')[-1]
-		get_pages(nextlink['href'])
-	
-	# get all cables
-	debug("\nGetting latest cables")
-	progress()
-	cablestoget = []
-	cabledir_re = re.compile('/'+cabledir+'/')
-	for idx in os.listdir(idxdir):
-		soup = BeautifulSoup.BeautifulSoup(open(os.path.join(idxdir,idx)).read())
-		cableurls = soup.findAll('a', {'href': cabledir_re})
-		debug(idx)
-	progress()
-	for cable in cableurls:
-		if not os.path.exists(cable['href'][1:]):
-			cablestoget.append(cable['href'])
-	# Here we should get the index of the blog and check
-	# which cables of what we update need to be uploaded
-	# This will let us create a progress bar
-	for cable in cablestoget:
-		debug(cable)
-		progress()
-		html =  urllib.urlopen(cablegate_prefix+cable, proxies=proxy).read()
-		dir = os.path.dirname(cable[1:])
-		if not os.path.exists(dir):
-			os.makedirs(dir)
-		open(cable[1:], 'w').write(html)
-
-# Parse cables
-subject_re  = re.compile(".*(SUBJECT|Subject):\s*([^\n]*)", re.MULTILINE | re.DOTALL)
-ref_re      = re.compile(".*(REF|Ref):\s*([^\n]*)", re.MULTILINE | re.DOTALL)
-ref_re_simp = re.compile("REF:|Ref:", re.MULTILINE | re.DOTALL)
-tags_re     = re.compile('TAGS:|Tags:')
-tags2a_re   = re.compile('TAGS')
-tags2b_re   = re.compile(".*TAGS\s+([^\n]*)", re.MULTILINE | re.DOTALL)
-def upload_cable(file):
-	f = open(file).read();
-	soup = BeautifulSoup.BeautifulSoup(''.join(f))
-	part1 = soup.find('pre')
-	if not part1:
-		debug("ERROR:\t\t%s"%file)
-		return
-	part2 = part1.findNext('pre')
-	if not part2:
-		debug("ERROR:\t\t%s"%file)
-		return
-
-	links = soup.find('table', { "class" : "cable" }).findAll('a')
-	reference_id 	= links[0].string.encode()
-	created 		= links[1].string.encode()
-	released 		= links[2].string.encode()
-	classification 	= links[3].string.encode()
-	origin 			= links[4].string.encode() 
-
-	# FIND SUBJECT
-	# in some rare cases "Subject:" is used instead of "SUBJECT:"
-	subject = ""
-	search = part2.find(text=subject_re)
-	if search:
-		search = re.sub('&#x000A;', "\n", search.string)
-		search = subject_re.match(search)
-	#	if len(search.group(2)) <= 48:
-	#		subject = search.group(2) + search.group(3) 
-	#	else:
-	#		subject = search.group(2)
-		subject = search.group(2)
-	if not subject:
-		subject = reference_id
-	# FIND REFs
-	ref = ""
-	search = part2.find(text=ref_re_simp)
-	if search:
-		ref = re.sub('&#x000A;', "\n", search.string)
-		ref = ref_re.match(ref).group(2)
-	# FIND TAGS
-	# Tags can somtimes be referenced with "TAGS:" and links and
-	# in rare cases with "TAGS" without links
-	tags = []
-	tags_ = part2.find(text=tags_re)
-	if tags_:
-		# assuming all tags are linked with "TAGS:"
-		tags_ = tags_.findNextSiblings('a', {'href': re.compile('/tag/')})
-		for tag in tags_:
-			tags.append(tag.string.encode())
-	else:
-		# sometimes its just "TAGS"
-		tags_ = part2.find(text=tags2a_re)
-		if tags_:
-			tags_ = re.sub('&#x000A;', "\n", tags_)
-			tags_ = tags2b_re.match(tags_)
-			if tags_:
-				for tag in tags_.group(1).split(','):
-					tags.append(re.sub(" ", "", tag))
-
-	#debug("%s\t%s"%(reference_id,subject))
-	# Build post 	
-	keywords = tags
-	keywords.append(reference_id)
-	keywords.append(origin)
-	keywords.append(classification)
-	keywords.append('cablegate')
-	keywords.append('wikileaks')
-	post = {
-			'title': reference_id+': '+subject,
-			'description': support+part1.prettify()+part2.prettify(),
-			#'dateCreated': ,
-			'categories': ['Cablegate'],
-			'mt_allow_pings': 1,
-			'mt_keywords': keywords,
-			}
-	progress()
-	print "uploading", reference_id,
-	id = blog.new_post(post, 1, blogid)
-	print id
-
-
-def upload_cables():
-	debug("\nParsing and uploading new cables")
-	for root, dirs, files in os.walk(cabledir):
-		for file in files:
-			if file[-5:] == '.html' and not refs_online.has_key(file[:-5]):
-				debug(os.path.join(root, file))
-				progress()
-				upload_cable(os.path.join(root, file))
 
 
 def main():
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "hu:p:b:t:i:c:x:nv", ["help"
+		opts, args = getopt.getopt(sys.argv[1:], "hu:p:b:t:i:c:x:y", ["help"
 			"user=", 'password=', 'blogrpc=', 'blogtype=', 'blogid=', 'cablegate=',
-			"proxy=",  'nodamnpoetry=', 'verbose'])
+			"proxy=",  'proxycheck'])
 	except getopt.GetoptError, err:
 		print str(err) 
 		usage()
 		sys.exit(2)
 	global user, password, blogrpcurl, blogtype, bloggetlist
-	global blogid, cablegateurl, proxyurl, proxy, VERBOSE
-	global nodamnpoetry, therevolution, therevolution_
+	global blogid, cablegateurl, cablegateurlroot, proxyurl, proxy
+	global proxycheck
 	for o, a in opts:
-		if o == "-v":
-			VERBOSE = True
-		elif o in ("-h", "--help"):
+		if o in ("-h", "--help"):
 			usage()
 			sys.exit()
 		elif o in ("-u", "--user"):
@@ -365,11 +340,13 @@ def main():
 				cablegateurl = False
 			elif a:
 				cablegateurl = a 
+				cablegateurlroot = '://'.join(urlparse.urlsplit(cablegateurl)[0:2])
 		elif o in ("-x", "--proxy"):
 			proxyurl = a
+			#proxy = {'http': "http://"+urlparse.urlsplit(proxyurl)[1]}
 			proxy = {'http': proxyurl}
-		elif o in ("-n", "--nodamnpoetry"):
-			nodamnpoetry = True
+		elif o in ("-y", "--proxycheck"):
+			proxycheck = True	
 		else:
 			assert False, "unhandled option"
 	if not blogrpcurl:
@@ -378,14 +355,17 @@ def main():
 		user         = raw_input("user: ")
 	if not password:
 		password     = getpass("password: ")
-	if not nodamnpoetry:
-		therevolution = zlib.decompress(base64.b64decode("eJy9Vk1v3DYQvfNXzKm5yD6kPbTNyXYTuy6SonEAt0dKml0xS3GEIbWb/fd9Q61jJ84aDlD0ssCKw/l48+YNzxJJ7GmlgVNPsqIxJCZJHVP2oT89PXXuH5lpF2KkJIVaJt9GpiI0xXlNITVUZoWbRB4uOplI5nJ69FaUzLSXWTPHld3KG7+uV/MmTI27wa95oJUo7rFSP2tIa3geR9Yu+Jgbd86dn+GoDEzKW4lzCfD1MGDhyNuQuUcJH55l9oRVqzKvh2IFIHdq9/Q3q3xyvyf6iSavJcO8DJb3fZ4Ap7DqPJm7fNx/HmRX3U6hA5acrRHvwidJro2ys+I9tfMaABpOkX2/fOsGr2u2bK5lSO5tKN3AMTZ0yYkVCZy16sdcb91MQYXO1ol3VgX74gZZ0+h3GSmnVcidL2xUkBGur7xGHkGChJS87p9E55lQPwYR7fshtXl65W5QC6/Q7bOd157gxRdd6r3HqXild774GNjdivSHygpvmd52f83M4KHS+RwjUNsc8LqeY/DH81+H7UJIGtG+gTJ/Ij9N7OMTd7iQhjowxsA0t0+0d/SbGgDUlw2tLNwkc+qzK0NIaFQDcJ5P54bOVWCoC9gAqZrBJMkXDLKQVv8tjgMA8ns3zXkw6pTBV9pNU50s8Jd62aUaH5TrNjaY9qcH10jn1DjgWnRfLwvlGHpevHQS7WjJzpIG6QUEykUi2uHHdo4gEZ+6d+cXjxVhUu6Rcw22q2gQnP78648vLaLyJMitcvLlL9SHXBTWT4D9mI3HAZrCOhsKUqwsA8C1C7QZVdSUQgLpUrFEol+G4P/zdzuEknhPkFL4axleHXpR1RHHhxE14SX1IVYFMqVQ67rN+aTScc7fCJOhK+B7xQ4452JHMazYHL+XvQNpNpxQTlEBfSpn6vjSrS+l1uPpfWVj9OALQrpLtQGMoYX2VM8f53HKcygLU1D+ADa1ZpT91qp5g9gf57y0H9lOaL90nTcioXuLw7MOeDQmCXSOSde4pyuk21Za48CqvQLorFt8Ync9Q7MekAJzl9Zsy4SyUO/HBJlTIwk6Ua+7nYz8gEQYCLRqRb+FzgY2+YiYmPm8TInh7K59XZR0w167oW6rDzKKKoC9G+cFmollQlp36B+YAGAZKmKaYOjafWtdgEDazvPfpbhfNneAk2iO8t0Ym7Vp44vOhtuBG4t0fkW4wQfdk9cRAFVI3H0zMXrLnWvUBDn5M/mcQ6a7DYUk4C7zkjaCjgY3Dh6mvdNQChKxjRVGuuW2bdwb8LWDp5tOSqE/eN/AHJyspN/TpcnIhR+ntq42gOyuJVnjbemlPc7y0NDrhP2IZAtdgXWsWJGbxrht9b+3hr6GzA3/xR6rTaK20n5l3fI0Ysz8ml3b2nB62mF07bmjyffSHP7WniSAVfNavi3k+Oq5NPhtfSvtQCf04+Czl21lj+0q13KvIiPoSyUYuw8HBHm5r3sdTGw+H0mIoFwru6dWm6DEYlVVObmQDR83XlUkaiRWPDTqnI9+Twv/Wxt3xSY/AvuEumxLHUaiV+xGfQHRwZVnvtqaI5/d91h/O7tlmJRPTHPvhPzVMdOI3JHzyQldQoorl0+u8EZM/wLFghCu")).split("\x0a")
-		therevolution.reverse()
-		therevolution_ = therevolution
 		
 	#begin 
+	if proxy and proxycheck:
+		check_proxy()
+
+	if bloggetlist:
+		list_blogs()
+
 	if cablegateurl:
-		get_cables()
+		download_all_index_pages()
+		download_all_cables()
 	setup_blog()
 	upload_cables()
 
