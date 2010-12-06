@@ -24,6 +24,7 @@ import getopt, sys
 from getpass import getpass
 import datetime
 import zlib, base64
+import gzip, io
 
 cablegateurl = "http://213.251.145.96/cablegate.html"
 cablegateurlroot = '://'.join(urlparse.urlsplit(cablegateurl)[0:2])
@@ -126,6 +127,17 @@ header = '<b>Dec 19th, cableleaksweap day</b><br>Get a <a'\
 'copy of this code</a> and upload the cablegate files to a blog of your'\
 'choice on that day<br><br>'
 
+def get_url(url):
+	opener = urllib.urlopen(url, data=None, proxies=proxy)
+	data = opener.read()
+	encoding = opener.headers.get('content-encoding',0)
+	opener.close()
+	if encoding == "gzip":
+		bytestream = io.BytesIO(data)
+		return gzip.GzipFile(fileobj=bytestream, mode="rb").read()
+	else:
+		return data
+
 def check_proxy():
 	print "Verifying proxy"
 	print "IP without proxy:",
@@ -161,7 +173,7 @@ def download_index_page_recursive(url, path):
 		return
 
 	print "%s: getting index and storing locally"%path
-	html     = urllib.urlopen(url, data=None, proxies=proxy).read()
+	html = get_url(url)
 	open(path, 'w').write(html)
 	try:
 		soup     = BeautifulSoup.BeautifulSoup(html)
@@ -184,9 +196,9 @@ def download_all_index_pages():
 		os.mkdir(indexdir)
 	if not os.path.exists(cabledir):
 		os.mkdir(cabledir)
-	html  = urllib.urlopen(cablegateurl, proxies=proxy)
-	soup  = BeautifulSoup.BeautifulSoup(html.read())
-	html.close()
+	#html  = urllib.urlopen(cablegateurl, proxies=proxy)
+	html  = get_url(cablegateurl)
+	soup  = BeautifulSoup.BeautifulSoup(html)
 	urls  = soup.findAll('a', {'href': re.compile(indexdir+'/.+')})
 	for url in urls:
 		url  = resolve_url(url['href'])
@@ -208,7 +220,7 @@ def download_all_cables():
 			path = url_to_relative_path(url)
 			if not os.path.exists(path):
 				print "downloading cable: %s (%s)"%(path, url)
-				html  = urllib.urlopen(url, proxies=proxy).read()
+				html  = get_url(url)# urllib.urlopen(url, proxies=proxy).read()
 				dir   = os.path.dirname(path)
 				if not os.path.exists(dir):
 					os.makedirs(dir)
