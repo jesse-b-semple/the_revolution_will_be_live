@@ -93,8 +93,8 @@ cat_tag_id=0
 cat_embassy_id=0
 cat_classification_id=0
 
-support = '<p><b><a href="%s/support.html">Support Wikileaks</a>, <a'\
-'<a href="http://couragetoresist.org/bradley/">Bradley Manning\'s Freedom</a>'\
+support = '<p><b><a href="%s/support.html">Support Wikileaks</a>, '\
+'<a href="http://couragetoresist.org/bradley/">Bradley Manning\'s Freedom</a> '\
 'and the <a href="https://www.eff.org/support">EFF</a></b></p>'
 
 therevolution = 'eJy9Vk1v3DYQvfNXDHJJC+zaQNpDm24N2Gli10VcNDbq9hRQ0uyKWYpUh9TK'\
