@@ -112,20 +112,34 @@ def resolve_url(url, concaturl=None):
 def url_to_relative_path(url):
 	path = urlparse.urlparse(url)[2]
 	return re.sub('^(/\.\./|\.\./|/)/*', '', path) #bleh
-
+import contextlib
 def download_index_page_recursive(url, path):
 	""" path relative, url absolute """
 	if os.path.exists(path):
 		print "%s: have index already, assuming we skip"%path
-	else:
-		print "%s: getting index and storing locally"%path
-		html     = urllib.urlopen(url, data=None, proxies=proxy).read()
-		open(path, 'w').write(html)
-		#print "len",url,len(html)
+		return
+
+	print "%s: getting index and storing locally"%path
+	with contextlib.closing(urllib.urlopen(url, data=None, proxies=proxy)) as h:
+		html = h.read()	
+		print html
+	#html     = urllib.urlopen(url, data=None, proxies=proxy).read()
+	open(path, 'w').write(html)
+	#print "len",url,len(html)
+	try:
 		soup     = BeautifulSoup.BeautifulSoup(html)
 		nextlink = soup.find('div', 'paginator').findAllNext('a')[-1]
-		nextlink = resolve_url(nextlink['href'], concaturl=url)
-		download_index_page_recursive(nextlink, url_to_relative_path(nextlink))
+	except Exception, err:
+		print err
+		print "\nProblem parsing %s. Exiting. Delete reldata indexes"%path
+		print "and try again. Corrupt indexes appear at times when"
+		print "using a proxy."
+		print url
+		sys.exit(2)
+	nextlink = resolve_url(nextlink['href'], concaturl=url)
+	path = url_to_relative_path(nextlink)
+	if not os.path.exists(path):
+		download_index_page_recursive(nextlink, path)
 def download_all_index_pages():
 	print "Downloading index by date released from %s"%cablegateurl
 	if not os.path.exists(indexdir):
@@ -177,15 +191,21 @@ def parse_and_upload_cable(path):
 	try:
 		soup = BeautifulSoup.BeautifulSoup(html)
 	except Exception, err:
-		print "ERROR: cannot parse file. Delete and download again"
+		print "ERROR: cannot parse file. Deleted."
+		print "Deleted. Rerun to download again."
+		os.remove(path)
 		return
 	part1 = soup.find('pre')
 	if not part1:
-		print "ERROR: corrupt file. Delete and download again"
+		print "ERROR: corrupt file. Deleted. "
+		print "Rerun to download again."
+		os.remove(path)
 		return
 	part2 = part1.findNext('pre')
 	if not part2:
-		print "ERROR: corrupt file. Delete and download again"
+		print "ERROR: corrupt file. Deleted."
+		print "Rerun to download again."
+		os.remove(path)
 		return
 
 	links = soup.find('table', { "class" : "cable" }).findAll('a')
@@ -238,9 +258,11 @@ def parse_and_upload_cable(path):
 	keywords.append(classification)
 	keywords.append('cablegate')
 	keywords.append('wikileaks')
+	#print part1.contents[0]
 	post = {
 			'title': subject,
 			'description': support+part1.prettify()+part2.prettify(),
+			#'description': support+part1.contents[0]+part2.contents[0],
 			'dateCreated': created_time,
 			'categories': ['Cablegate'],
 			'mt_allow_pings': 1,
@@ -265,7 +287,9 @@ def list_blogs():
 	except Exception, err:
 		print str(err)
 		print
-		print "Error connecting to blog. If using a proxy, just try again a few times"
+		print "Error connecting to blog. If using a proxy,"
+		print "try again a few times, use a different proxy,"
+		print "or help us improve the code"
 		sys.exit(2)
 	for b in blog.get_users_blogs():
 		print "%d: %s"%(i, b['blogName'])
@@ -305,7 +329,7 @@ def setup_blog():
 		if p['page_title'] == page['title']:
 			page_id = p['page_id']
 	if page_id:
-		print "Updating copy code on blog"
+		print "Updating code copy on blog"
 		blog.edit_page(page_id, page, 1, blogid)
 	else:
 		print "Uploading copy of code"
