@@ -328,24 +328,6 @@ def upload_cables():
 				print "uploading cable: %s"%os.path.join(root, file),
 				parse_and_upload_cable(os.path.join(root, file))
 
-def list_blogs():
-	print "Blog ID's available:"
-	i = 0
-	try:
-		blog = pyblog.WordPress(blogrpcurl, user, password, 
-				urlparse.urlparse(proxyurl)[1])
-	except Exception, err:
-		print str(err)
-		print
-		print "Error connecting to blog. If using a proxy,"
-		print "try again a few times, use a different proxy,"
-		print "or help us improve the code"
-		sys.exit(2)
-	for b in blog.get_users_blogs():
-		print "%d: %s"%(i, b['blogName'])
-		i += 1
-	sys.exit(2)
-
 # Setup blog connection
 title_to_ref_re = re.compile("^([^\:]+):")
 refs_online = {}
@@ -353,15 +335,28 @@ def setup_blog():
 	print "Connecting to blog"
 	global blog, blogid
 	try:
-		blog = pyblog.WordPress(blogrpcurl, user, password, 
-				urlparse.urlparse(proxyurl)[1])
+		if proxyurl:
+			blog = pyblog.WordPress(blogrpcurl, user, password, 
+					urlparse.urlparse(proxyurl)[1])
+		else:
+			blog = pyblog.WordPress(blogrpcurl, user, password)
 	except Exception, err:
-		print str(err)
+		print "Error connecting to blog. If using a proxy,"
+		print "Try again or help us improve the code few."
 		print
-		print "Error connecting to blog. If using a proxy, just try again" \
-		      "a few times"
+		print str(err)
 		sys.exit(2)
 
+def list_blogs():
+	print "Blog ID's available:"
+	i = 0
+	setup_blog()
+	for b in blog.get_users_blogs():
+		print "%d: %s"%(i, b['blogName'])
+		i += 1
+	sys.exit(2)
+
+def prep_blog():
 	# Upload code to blog page
 	code = open(sys.argv[0]).read()
 	code = code.replace('&', '&amp;')
@@ -404,7 +399,7 @@ def setup_blog():
 		if c['description'] == cablegatecat['name']:
 			havecat = True
 	if not havecat:
-		print "creating '%s' category"%cablegatecat
+		print "creating '%s' category"%cablegatecat['name']
 		blog.new_category(cablegatecat, blogid)
 
 
@@ -469,6 +464,7 @@ def main():
 		download_all_index_pages()
 		download_all_cables()
 	setup_blog()
+	prep_blog()
 	upload_cables()
 
 	
