@@ -88,8 +88,9 @@ a https blog xmlrpc url or https for the cables, until further notice.
 Tested on wordpress.org installations and wordpress.com blogs.
 	"""%(sys.argv[0], VERSION,  cablegateurl)
 
-support = '<p><b><a href="%s/support.html">Support Wikileaks</a> and the '\
-'<a href="https://www.eff.org/support">EFF</a></b></p>'
+support = '<p><b><a href="%s/support.html">Support Wikileaks</a>, <a'\
+'<a href="http://www.bradleymanning.org/">Bradley Manning\'s Freedom</a>'\
+'and the <a href="https://www.eff.org/support">EFF</a></b></p>'
 
 therevolution = 'eJy9Vk1v3DYQvfNXDHJJC+zaQNpDm24N2Gli10VcNDbq9hRQ0uyKWYpUh9TK'\
 '++/7htqNkzhrJEDRo8ThfLx584YLS63w8ucnbc798+PjcRyPGuv8tovZxXBU'\
