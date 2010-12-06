@@ -321,7 +321,7 @@ def setup_blog():
 	page = {
 		'title': "The Revolution Will Be Live",
 		'wp_slug': "the_revolution_will_be_live",
-		'description': "<b>Dec 19th, cableleaksweap day</b><br>Get a copy of this code and upload the cablegate files to a blog of your choice on that day<br><br"+zlib.decompress(therevolution)+code
+		'description': "<b>Dec 19th, cableleaksweap day</b><br>Get a copy of this code and upload the cablegate files to a blog of your choice on that day<br><br>"+zlib.decompress(therevolution)+code
 		#'description': code
 		}
 	page_id = 0
