@@ -122,7 +122,7 @@ therevolution = 'eJy9Vk1v3DYQvfNXDHJJC+zaQNpDm24N2Gli10VcNDbq9hRQ0uyKWYpUh9TK'\
 '/fnspmESPMKhuXsh/+mQqUfuR2ZxXB7Wi+pkPqdzaPJE6gu8FcPiuDpZVHJi'\
 'zL/VbUv5'
 therevolution = zlib.decompress(base64.b64decode(therevolution))
-header = '<b>Dec 19th, cableleaksweap day</b><br>Get a <a'\
+header = '<b>Dec 19th, cableleaksweap day</b><br>Get a <a '\
 'href="http://github.com/jesse-b-semple/the_revolution_will_be_live">'\
 'copy of this code</a> and upload the cablegate files to a blog of your'\
 'choice on that day<br><br>'
