@@ -23,6 +23,7 @@ import os, os.path
 import getopt, sys
 from getpass import getpass
 import datetime
+import zlib, base64
 
 cablegateurl = "http://213.251.145.96/cablegate.html"
 cablegateurlroot = '://'.join(urlparse.urlsplit(cablegateurl)[0:2])
@@ -86,20 +87,59 @@ a https blog xmlrpc url or https for the cables, until further notice.
 Tested on wordpress.org installations and wordpress.com blogs.
 	"""%(sys.argv[0], VERSION,  cablegateurl)
 
-support = """
-<p><b><a href="%s/support.html">Support Wikileaks</a> and the <a href="https://www.eff.org/support">EFF</a></b></p>
-"""%cablegateurlroot
+support = '<p><b><a href="%s/support.html">Support Wikileaks</a> and the '\
+'<a href="https://www.eff.org/support">EFF</a></b></p>'
+
+therevolution = 'eJy9Vk1v3DYQvfNXDHJJC+zaQNpDm24N2Gli10VcNDbq9hRQ0uyKWYpUh9TK'\
+'++/7htqNkzhrJEDRo8ThfLx584YLS63w8ucnbc798+PjcRyPGuv8tovZxXBU'\
+'x+544xqOx3f9P0N+m1ueC2+iH/R4Pjrv5yHmecXzzJ43LvHbbkiufnJy0zK9'\
+'eW9KtzClq5jpjOlmZ9rQN3+q828Xx/bELHrhE/N3HEjdEtxSxWQrz5QjpWy3'\
+'1MaOZ1RJRB5ydNC298OKXJhRHiQQgtvQUB17ikM+fMvHxLSNgyT2S72V1nZV'\
+'rprrtSuXaRkFV1ioGcSFFZx2HUvtrE8zc8a1HeADydE9SB/F2oPUHBlz80Vm'\
+'j1gBh2HVZs0daVO1pb9Y4p35NdD31FvJCea51bzv8wQumUWGXt2lw/5TG8fi'\
+'tnc1YOREcUlX7i4GU/k4avGWqmEF7BQiz7aZ/tWtlRVrNpexDea1y3XL3s/o'\
+'nAMLEjitxHap3LrunUQ6XQUetQq22bRxRZ0dE1IOS5dqm0GTpcQOri+seO4o'\
+'2YCUrGwfRecLoX4IorbPXKMMXqLRp6OVhuDAZplKvYcoW6Erm613bG5jbHZF'\
+'Zd4wva7/GJjBPqGzwXsAtt5BdTl4Zw+nvnKbiYbUoXMtJb4j2/ds/SN3OJO4'\
+'plSANmkFYage6W5n1yUISB/XtNSQfRxCk0xuXUCfMGUH2ZweQDyjs/1MakgA'\
+'VSLBJMSPCKQhFQNVAweQ7Nb0Q2qVObm1hXV9XwYL9KUmjqHEB+PqtY6kfjSg'\
+'GskQZgbYZtmWyxAIDymZvNTR69GUnSYNzkfwJ+Xo0RLbVYMHh/jIXJ29eKgF'\
+'0KEGOZdgY0GD4PSH5989M/Al3EfkVij57EdqXMoC60fAfkjGwwD1bpUUBcgv'\
+'ylIAzE7uEqooKbkA4oWsiXg7zcD/5++2dTnwliCi8FcxvBr0oogjjncTqpJL'\
+'gj1SBEiFQrTrOua9xJpT+kyYBFmhae/o1KSsR94tWR2/iVsD0qw5oJwsEfQp'\
+'nCnTS7c251KPxcpRNnoLviCkORcdQu8qSE/x/G7o+jS4PDEF5bdgU6VGyW60'\
+'mleI/W5IU/uRbY/2x7q2SiR0b3J4WgOPmcoC9tmGxW/pAulWhdY40GovADrL'\
+'Br/YXA6QrA9IgbkLK9ZdQilSY7sAlRMlCTpRrpsRu+4DEmEg0Kol/eJqHdhg'\
+'PWJi7tM0JYqzubSBFftrtlK3ZVndxC6KANj9OE/Q9Bx7pLVHf8cEAMtQEtUE'\
+'RVfva+sc9FFXnv0qwf24uS2ceHWU9mOs1qqPT2sdbgNuTPL5CeFa62RLVjoA'\
+'VCAx983E6E13LlET5OT3YFNyifYLCknAXeIpbQTtFG4cfJj2KC5nJKILy3V0'\
+'y1U1M6/A1xqeruuYM/3G2xnMwclC+i2dq4y8sF1flc0GkM1lDNp43Xlhi7PU'\
+'zuhlwHpEspkuwDoWbMj1TLmt9b/Rhr6EzLX/xRorTaKq0H6p3bLUYczsik1V'\
+'6XBaGjG6+tCRYJs4232WngSAVfKa/k3k+OSh1NpNeSWNoBP6sfPZxE1hj+4r'\
+'U3EjMXagL2Wn7N4dEOTlvu6VU7F5fxSdB+WqOD623iJKzFpVkZMXcc2HjZcF'\
+'iRKJBe+MMucdHo8T/ysdd8E2PwB7j7p0S+1GohHsRnkK0cGVL3y0zQ78Nl9j'\
+'/fnspmESPMKhuXsh/+mQqUfuR2ZxXB7Wi+pkPqdzaPJE6gu8FcPiuDpZVHJi'\
+'zL/VbUv5'
+therevolution = zlib.decompress(base64.b64decode(therevolution))
+header = '<b>Dec 19th, cableleaksweap day</b><br>Get a <a'\
+'href="http://github.com/jesse-b-semple/the_revolution_will_be_live">'\
+'copy of this code</a> and upload the cablegate files to a blog of your'\
+'choice on that day<br><br>'
 
 def check_proxy():
 	print "Verifying proxy"
 	print "IP without proxy:",
-	print BeautifulSoup.BeautifulSoup(urllib.urlopen('http://check.torproject.org/', proxies=None).read()).find('b').string
+	print BeautifulSoup.BeautifulSoup(urllib.urlopen(
+		'http://check.torproject.org/', 
+		proxies=None).read()).find('b').string
 	print "IP with proxy:",
-	print  BeautifulSoup.BeautifulSoup(urllib.urlopen('http://check.torproject.org/', proxies=proxy).read()).find('b').string
-#	sys.exit(2)
+	print  BeautifulSoup.BeautifulSoup(urllib.urlopen(
+		'http://check.torproject.org/', 
+		proxies=proxy).read()).find('b').string
 
 def resolve_url(url, concaturl=None):
-	""" concaturl used to keep within the url directory context of caller """
+	""" concaturl used to keep within the url directory context of 
+	    caller """
 	if url[:7] in ('http://', 'HTTP://'):
 		return url
 	else:
@@ -107,12 +147,13 @@ def resolve_url(url, concaturl=None):
 			concat = urlparse.urljoin(cablegateurlroot, concaturl)
 			return urlparse.urljoin(concat, re.sub('^/*\.\./', '', url))
 		else:
-			return urlparse.urljoin(cablegateurlroot, re.sub('^/*\.\./', '', url))
+			return urlparse.urljoin(cablegateurlroot, 
+					re.sub('^/*\.\./', '', url))
 
 def url_to_relative_path(url):
 	path = urlparse.urlparse(url)[2]
 	return re.sub('^(/\.\./|\.\./|/)/*', '', path) #bleh
-import contextlib
+
 def download_index_page_recursive(url, path):
 	""" path relative, url absolute """
 	if os.path.exists(path):
@@ -120,12 +161,8 @@ def download_index_page_recursive(url, path):
 		return
 
 	print "%s: getting index and storing locally"%path
-	with contextlib.closing(urllib.urlopen(url, data=None, proxies=proxy)) as h:
-		html = h.read()	
-		print html
-	#html     = urllib.urlopen(url, data=None, proxies=proxy).read()
+	html     = urllib.urlopen(url, data=None, proxies=proxy).read()
 	open(path, 'w').write(html)
-	#print "len",url,len(html)
 	try:
 		soup     = BeautifulSoup.BeautifulSoup(html)
 		nextlink = soup.find('div', 'paginator').findAllNext('a')[-1]
@@ -140,6 +177,7 @@ def download_index_page_recursive(url, path):
 	path = url_to_relative_path(nextlink)
 	if not os.path.exists(path):
 		download_index_page_recursive(nextlink, path)
+
 def download_all_index_pages():
 	print "Downloading index by date released from %s"%cablegateurl
 	if not os.path.exists(indexdir):
@@ -166,9 +204,7 @@ def download_all_cables():
 		soup = BeautifulSoup.BeautifulSoup(open(path).read())
 		cableurls = soup.findAll('a', {'href': cabledir_re})
 		for url in cableurls:
-			#print url['href'],
 			url  = resolve_url(url['href'])
-			#print url
 			path = url_to_relative_path(url)
 			if not os.path.exists(path):
 				print "downloading cable: %s (%s)"%(path, url)
@@ -179,8 +215,10 @@ def download_all_cables():
 				open(path, 'w').write(html)
 			
 # Parse upload cables
-subject_re  = re.compile(".*(SUBJECT|Subject):\s*([^\n]*)", re.MULTILINE | re.DOTALL)
-ref_re      = re.compile(".*(REF|Ref):\s*([^\n]*)", re.MULTILINE | re.DOTALL)
+subject_re  = re.compile(".*(SUBJECT|Subject):\s*([^\n]*)", 
+		re.MULTILINE | re.DOTALL)
+ref_re      = re.compile(".*(REF|Ref):\s*([^\n]*)", 
+		re.MULTILINE | re.DOTALL)
 ref_re_simp = re.compile("REF:|Ref:", re.MULTILINE | re.DOTALL)
 tags_re     = re.compile('TAGS:|Tags:')
 tags2a_re   = re.compile('TAGS')
@@ -258,11 +296,9 @@ def parse_and_upload_cable(path):
 	keywords.append(classification)
 	keywords.append('cablegate')
 	keywords.append('wikileaks')
-	#print part1.contents[0]
 	post = {
 			'title': subject,
 			'description': support+part1.prettify()+part2.prettify(),
-			#'description': support+part1.contents[0]+part2.contents[0],
 			'dateCreated': created_time,
 			'categories': ['Cablegate'],
 			'mt_allow_pings': 1,
@@ -283,7 +319,8 @@ def list_blogs():
 	print "Blog ID's available:"
 	i = 0
 	try:
-		blog = pyblog.WordPress(blogrpcurl, user, password, urlparse.urlparse(proxyurl)[1])
+		blog = pyblog.WordPress(blogrpcurl, user, password, 
+				urlparse.urlparse(proxyurl)[1])
 	except Exception, err:
 		print str(err)
 		print
@@ -303,11 +340,13 @@ def setup_blog():
 	print "Connecting to blog"
 	global blog, blogid
 	try:
-		blog = pyblog.WordPress(blogrpcurl, user, password, urlparse.urlparse(proxyurl)[1])
+		blog = pyblog.WordPress(blogrpcurl, user, password, 
+				urlparse.urlparse(proxyurl)[1])
 	except Exception, err:
 		print str(err)
 		print
-		print "Error connecting to blog. If using a proxy, just try again a few times"
+		print "Error connecting to blog. If using a proxy, just try again" \
+		      "a few times"
 		sys.exit(2)
 
 	# Upload code to blog page
@@ -316,13 +355,12 @@ def setup_blog():
 	code = code.replace('<', '&lt;')
 	code = code.replace('>', '&gt;')
 	code = "<pre>"+code+"</pre>"
-	import zlib
-	therevolution='x\x9c\xbdVMo\xdc6\x10\xbd\xf3W\x0crI\x0b\xec\xda@\xdaC\x9bn\r\xd8ib\xd7E\\46\xea\xf6\x14P\xd2\xec\x8aY\x8aT\x87\xd4\xca\xfb\xef\xfb\x86\xda\x8d\x938k$@\xd1\xa3\xc4\xe1|\xbcy\xf3\x86\x0bK\xad\xf0\xf2\xe7\'m\xce\xfd\xf3\xe3\xe3q\x1c\x8f\x1a\xeb\xfc\xb6\x8b\xd9\xc5pT\xc7\xeex\xe3\x1a\x8e\xc7w\xfd?C~\x9b[\x9e\x0bo\xa2\x1f\xf4x>:\xef\xe7!\xe6y\xc5\xf3\xcc\x9e7.\xf1\xdbnH\xae~rr\xd32\xbdyoJ\xb70\xa5\xab\x98\xe9\x8c\xe9fg\xda\xd07\x7f\xaa\xf3o\x17\xc7\xf6\xc4,z\xe1\x13\xf3w\x1cH\xdd\x12\xdcR\xc5d+\xcf\x94#\xa5l\xb7\xd4\xc6\x8egTID\x1ert\xd0\xb6\xf7\xc3\x8a\\\x98Q\x1e$\x10\x82\xdb\xd0P\x1d{\x8aC>|\xcb\xc7\xc4\xb4\x8d\x83$\xf6K\xbd\x95\xd6vU\xae\x9a\xeb\xb5+\x97i\x19\x05WX\xa8\x19\xc4\x85\x15\x9cv\x1dK\xed\xacO3s\xc6\xb5\x1d\xe0\x03\xc9\xd1=H\x1f\xc5\xda\x83\xd4\x1c\x19s\xf3Ef\x8fX\x01\x87a\xd5f\xcd\x1diS\xb5\xa5\xbfX\xe2\x9d\xf95\xd0\xf7\xd4[\xc9\t\xe6\xb9\xd5\xbc\xef\xf3\x04.\x99E\x86^\xdd\xa5\xc3\xfeS\x1b\xc7\xe2\xb6w5`\xe4DqIW\xee.\x06S\xf98j\xf1\x96\xaaa\x05\xec\x14"\xcf\xb6\x99\xfe\xd5\xad\x95\x15k6\x97\xb1\r\xe6\xb5\xcbu\xcb\xde\xcf\xe8\x9c\x03\x0b\x128\xad\xc4v\xa9\xdc\xba\xee\x9dD:]\x05\x1e\xb5\n\xb6\xd9\xb4qE\x9d\x1d\x13R\x0eK\x97j\x9bA\x93\xa5\xc4\x0e\xae/\xacx\xee(\xd9\x80\x94\xacl\x1fE\xe7\x0b\xa1~\x08\xa2\xb6\xcf\\\xa3\x0c^\xa2\xd1\xa7\xa3\x95\x86\xe0\xc0f\x99J\xbd\x87([\xa1+\x9b\xadwlnclvEe\xde0\xbd\xae\xff\x18\x98\xc1>\xa1\xb3\xc1{\x00\xb6\xdeAu9xg\x0f\xa7\xber\x9b\x89\x86\xd4\xa1s-%\xbe#\xdb\xf7l\xfd#w8\x93\xb8\xa6T\x806i\x05a\xa8\x1e\xe9ng\xd7%\x08H\x1f\xd7\xb4\xd4\x90}\x1cB\x93Ln]@\x9f0e\x07\xd9\x9c\x1e@<\xa3\xb3\xfdLjH\x00U"\xc1$\xc4\x8f\x08\xa4!\x15\x03U\x03\x07\x90\xec\xd6\xf4Cj\x959\xb9\xb5\x85u}_\x06\x0b\xf4\xa5&\x8e\xa1\xc4\x07\xe3\xea\xb5\x8e\xa4~4\xa0\x1a\xc9\x10f\x06\xd8f\xd9\x96\xcb\x10\x08\x0f)\x99\xbc\xd4\xd1\xeb\xd1\x94\x9d&\r\xceG\xf0\'\xe5\xe8\xd1\x12\xdbU\x83\x07\x87\xf8\xc8\\\x9d\xbdx\xa8\x05\xd0\xa1\x069\x97`cA\x83\xe0\xf4\x87\xe7\xdf=3\xf0%\xdcG\xe4V(\xf9\xecGj\\\xca\x02\xebG\xc0~H\xc6\xc3\x00\xf5n\x95\x14\x05\xc8/\xcaR\x00\xccN\xee\x12\xaa()\xb9\x00\xe2\x85\xac\x89x;\xcd\xc0\xff\xe7\xef\xb6u9\xf0\x96 \xa2\xf0W1\xbc\x1a\xf4\xa2\x88#\x8ew\x13\xaa\x92K\x82=R\x04H\x85B\xb4\xeb:\xe6\xbd\xc4\x9aS\xfaL\x98\x04Y\xa1i\xef\xe8\xd4\xa4\xacG\xde-Y\x1d\xbf\x89[\x03\xd2\xac9\xa0\x9c,\x11\xf4)\x9c)\xd3K\xb76\xe7R\x8f\xc5\xcaQ6z\x0b\xbe \xa49\x17\x1dB\xef*HO\xf1\xfcn\xe8\xfa4\xb8<1\x05\xe5\xb7`S\xa5F\xc9n\xb4\x9aW\x88\xfdnHS\xfb\x91m\x8f\xf6\xc7\xba\xb6J$torxZ\x03\x8f\x99\xca\x02\xf6\xd9\x86\xc5o\xe9\x02\xe9V\x85\xd68\xd0j/\x00:\xcb\x06\xbf\xd8\\\x0e\x90\xac\x0fH\x81\xb9\x0b+\xd6]B)Rc\xbb\x00\x95\x13%\t:Q\xae\x9b\x11\xbb\xee\x03\x12a \xd0\xaa%\xfd\xe2j\x1d\xd8`=bb\xee\xd34%\x8a\xb3\xb9\xb4\x81\x15\xfbk\xb6R\xb7eY\xdd\xc4.\x8a\x00\xd8\xfd8O\xd0\xf4\x1c{\xa4\xb5G\x7f\xc7\x04\x00\xcbP\x12\xd5\x04EW\xefk\xeb\x1c\xf4QW\x9e\xfd*\xc1\xfd\xb8\xb9-\x9cxu\x94\xf6c\xac\xd6\xaa\x8fOk\x1dn\x03nL\xf2\xf9\t\xe1Z\xebdKV:\x00T 1\xf7\xcd\xc4\xe8Mw.Q\x13\xe4\xe4\xf7`Sr\x89\xf6\x0b\nI\xc0]\xe2)m\x04\xed\x14n\x1c|\x98\xf6(.g$\xa2\x0b\xcbut\xcbU53\xaf\xc0\xd7\x1a\x9e\xae\xeb\x983\xfd\xc6\xdb\x19\xcc\xc1\xc9B\xfa-\x9d\xab\x8c\xbc\xb0]_\x95\xcd\x06\x90\xcde\x0c\xdax\xddya\x8b\xb3\xd4\xce\xe8e\xc0zD\xb2\x99.\xc0:\x16l\xc8\xf5L\xb9\xad\xf5\xbf\xd1\x86\xbe\x84\xcc\xb5\xff\xc5\x1a+M\xa2\xaa\xd0~\xa9\xdd\xb2\xd4a\xcc\xec\x8aMU\xe9pZ\x1a1\xba\xfa\xd0\x91`\x9b8\xdb}\x96\x9e\x04\x80U\xf2\x9a\xfeM\xe4\xf8\xe4\xa1\xd4\xdaMy%\x8d\xa0\x13\xfa\xb1\xf3\xd9\xc4Ma\x8f\xee+Sq#1v\xa0/e\xa7\xec\xde\x1d\x10\xe4\xe5\xbe\xee\x95S\xb1y\x7f\x14\x9d\x07\xe5\xaa8>\xb6\xde"J\xccZU\x91\x93\x17q\xcd\x87\x8d\x97\x05\x89\x12\x89\x05\xef\x8c2\xe7\x1d\x1e\x8f\x13\xff+\x1dw\xc16?\x00{\x8f\xbatK\xedF\xa2\x11\xecFy\n\xd1\xc1\x95/|\xb4\xcd\x0e\xfc6_c\xfd\xf9\xec\xa6a\x12<\xc2\xa1\xb9{!\xff\xe9\x90\xa9G\xeeGfq\\\x1e\xd6\x8b\xead>\xa7sh\xf2D\xea\x0b\xbc\x15\xc3\xe2\xb8:YTrb\xcc\xbf\xd5mK\xf9'
+
+	html = header+therevolution+code
 	page = {
 		'title': "The Revolution Will Be Live",
 		'wp_slug': "the_revolution_will_be_live",
-		'description': "<b>Dec 19th, cableleaksweap day</b><br>Get a copy of this code and upload the cablegate files to a blog of your choice on that day<br><br>"+zlib.decompress(therevolution)+code
-		#'description': code
+		'description': html
 		}
 	page_id = 0
 	for p in blog.get_page_list(blogid):
@@ -361,8 +399,8 @@ def setup_blog():
 def main():
 	try:
 		opts, args = getopt.getopt(sys.argv[1:], "hu:p:b:t:i:c:x:y", ["help"
-			"user=", 'password=', 'blogrpc=', 'blogtype=', 'blogid=', 'cablegate=',
-			"proxy=",  'proxycheck'])
+			"user=", 'password=', 'blogrpc=', 'blogtype=', 'blogid=', 
+			'cablegate=', 'proxy=',  'proxycheck'])
 	except getopt.GetoptError, err:
 		print str(err) 
 		usage()
@@ -392,10 +430,9 @@ def main():
 				cablegateurl = False
 			elif a:
 				cablegateurl = a 
-				cablegateurlroot = '://'.join(urlparse.urlsplit(cablegateurl)[0:2])
+				cablegateurlroot='://'.join(urlparse.urlsplit(cablegateurl)[0:2])
 		elif o in ("-x", "--proxy"):
 			proxyurl = a
-			#proxy = {'http': "http://"+urlparse.urlsplit(proxyurl)[1]}
 			proxy = {'http': proxyurl}
 		elif o in ("-y", "--proxycheck"):
 			proxycheck = True	
