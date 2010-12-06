@@ -88,6 +88,11 @@ a https blog xmlrpc url or https for the cables, until further notice.
 Tested on wordpress.org installations and wordpress.com blogs.
 	"""%(sys.argv[0], VERSION,  cablegateurl)
 
+cat_cablegate_id=0
+cat_tag_id=0
+cat_embassy_id=0
+cat_classification_id=0
+
 support = '<p><b><a href="%s/support.html">Support Wikileaks</a>, <a'\
 '<a href="http://couragetoresist.org/bradley/">Bradley Manning\'s Freedom</a>'\
 'and the <a href="https://www.eff.org/support">EFF</a></b></p>'
@@ -239,6 +244,7 @@ tags2b_re   = re.compile(".*TAGS\s+([^\n]*)", re.MULTILINE | re.DOTALL)
 tags_link_re = re.compile('tag/')
 def parse_and_upload_cable(path):
 	html = open(path).read()
+	html = re.sub('&#x000A;', "\n", html)
 	try:
 		soup = BeautifulSoup.BeautifulSoup(html)
 	except Exception, err:
@@ -258,7 +264,6 @@ def parse_and_upload_cable(path):
 		print "Rerun to download again."
 		os.remove(path)
 		return
-
 	links = soup.find('table', { "class" : "cable" }).findAll('a')
 	reference_id 	= links[0].string.encode()
 	created 		= links[1].string.encode()
@@ -303,17 +308,35 @@ def parse_and_upload_cable(path):
 					tags.append(re.sub(" ", "", tag))
 
 	# Build post 	
-	keywords = tags
+	post_cats = ['Cablegate']
+	keywords = []
+	keywords.append(tags)
 	keywords.append(reference_id)
 	keywords.append(origin)
 	keywords.append(classification)
 	keywords.append('cablegate')
 	keywords.append('wikileaks')
+	# make categories:
+	for tag in tags:
+		if not blog.suggest_categories(tag, blogid): 
+			blog.new_category({'name': tag, 'slug':tag,
+				'parent_id': cat_tag_id, 'description': ''})
+		post_cats.append(tag)
+	origin = origin.replace(' ', '_')
+	if not blog.suggest_categories(origin, blogid):
+		blog.new_category({'name': origin, 'slug':origin,
+			'parent_id': cat_embassy_id, 'description': ''})
+	post_cats.append(origin)
+	classification = classification.replace('/', '_')
+	if not blog.suggest_categories(classification, blogid):
+		blog.new_category({'name': classification, 'slug':classification,
+			'parent_id': cat_classification_id, 'description': ''})
+	post_cats.append(classification)
 	post = {
 			'title': subject,
-			'description': support+part1.prettify()+part2.prettify(),
+			'description': support+str(part1)+str(part2),
 			'dateCreated': created_time,
-			'categories': ['Cablegate'],
+			'categories': post_cats,
 			'mt_allow_pings': 1,
 			'mt_keywords': keywords,
 			}
@@ -357,6 +380,7 @@ def list_blogs():
 	sys.exit(2)
 
 def prep_blog():
+	global cat_cablegate_id, cat_tag_id, cat_embassy_id, cat_classification_id
 	# Upload code to blog page
 	code = open(sys.argv[0]).read()
 	code = code.replace('&', '&amp;')
@@ -388,19 +412,40 @@ def prep_blog():
 		refs_online.update({tag['name']: 1})
 	# check our category exists:
 	cats = blog.get_categories(blogid)
-	cablegatecat = {
-		'name':'Cablegate', # change to 'cablegate'
-		'slug':'cablegate',
-		'parent_id': 0,
-		'description': 'Wikileaks State Department Cables'
-		}
-	havecat = False
+	cat_cablegate          = {'name':'Cablegate', 'slug':'cablegate',
+		                      'parent_id': 0, 'description': ''}
+	cat_cablegate_id       = 0
+	cat_tag                = {'name':'Tag', 'slug':'tag',
+		                      'parent_id': 0, 'description': ''}
+	cat_tag_id             = 0
+	cat_embassy            = {'name':'Embassy', 'slug':'embassy',
+		                      'parent_id': 0, 'description': ''}
+	cat_embassy_id         = 0
+	cat_classification     = {'name':'Classification', 'slug':'classification',
+		                     'parent_id': 0, 'description': ''}
+	cat_classification_id  = 0
 	for c in cats:
-		if c['description'] == cablegatecat['name']:
-			havecat = True
-	if not havecat:
-		print "creating '%s' category"%cablegatecat['name']
-		blog.new_category(cablegatecat, blogid)
+		if c['description'] == cat_cablegate['name']:
+			cat_cablegate_id      = c['categoryId']
+		elif c['description'] == cat_tag['name']:
+			cat_tag_id            = c['categoryId']
+		elif c['description'] == cat_embassy['name']:
+			cat_embassy_id        = c['categoryId']
+		elif c['description'] == cat_classification['name']:
+			cat_classification_id = c['categoryId']
+
+	if not cat_cablegate_id:
+		print "creating '%s' category"%cat_cablegate['name']
+		blog.new_category(cat_cablegate, blogid)
+	if not cat_embassy_id:
+		print "creating '%s' category"%cat_embassy['name']
+		cat_embassy_id = blog.new_category(cat_embassy, blogid)
+	if not cat_classification_id:
+		print "creating '%s' category"%cat_classification['name']
+		cat_classification_id = blog.new_category(cat_classification, blogid)
+	if not cat_tag_id:
+		print "creating '%s' category"%cat_tag['name']
+		cat_tag_id = blog.new_category(cat_tag, blogid)
 
 
 
