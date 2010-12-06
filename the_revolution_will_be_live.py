@@ -232,37 +232,6 @@ def download_all_cables():
 					os.makedirs(dir)
 				open(path, 'w').write(html)
 
-#def cut_paragraphs(html):
-	#	paragraphs = re.split('<', html)
-def find_next_space(string):
-	i = 0
-	for i in range(0,len(string)):
-		if string[i] == ' ':
-			return i
-	return i
-def fmt2(t, c=60):
-	i = 0
-	out = ""
-	while True:
-		if type(t) == BeautifulSoup.NavigableString:
-			s = re.sub(' *&#x000A;', "\n", t.string)
-			for chr in range(0,len(s)):
-				if s[chr] == "\n":
-					out += "\n"
-					i = 0
-					continue
-				elif s[chr] == ' ' and i+find_next_space(s[chr:]) > c:
-					out += "\n"
-					i = 0
-					continue
-				else:
-					out += s[chr]
-					i += 1
-		try:
-			t = t.next
-		except:
-			break
-	return out	
 def fmt(s, c=60):
 	s = re.sub(' *&#x000A;', "\n", s)
 	s = re.sub('\n\s*\n+', "<br><br>", s)
@@ -322,6 +291,8 @@ def parse_and_upload_cable(path):
 	subject = re.sub(subject_re_sub, '', subject)
 	if subject.isupper():
 		subject = subject.title()
+		subject = subject.replace('\'S', '\'s')
+		subject = subject.replace('\'T', '\'S')
 
 	# Tags can somtimes be referenced with "TAGS:" and links and
 	# in rare cases with "TAGS" without links
