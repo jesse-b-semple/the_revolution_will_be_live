@@ -231,7 +231,43 @@ def download_all_cables():
 				if not os.path.exists(dir):
 					os.makedirs(dir)
 				open(path, 'w').write(html)
-			
+
+#def cut_paragraphs(html):
+	#	paragraphs = re.split('<', html)
+def find_next_space(string):
+	i = 0
+	for i in range(0,len(string)):
+		if string[i] == ' ':
+			return i
+	return i
+def fmt2(t, c=60):
+	i = 0
+	out = ""
+	while True:
+		if type(t) == BeautifulSoup.NavigableString:
+			s = re.sub(' *&#x000A;', "\n", t.string)
+			for chr in range(0,len(s)):
+				if s[chr] == "\n":
+					out += "\n"
+					i = 0
+					continue
+				elif s[chr] == ' ' and i+find_next_space(s[chr:]) > c:
+					out += "\n"
+					i = 0
+					continue
+				else:
+					out += s[chr]
+					i += 1
+		try:
+			t = t.next
+		except:
+			break
+	return out	
+def fmt(s, c=60):
+	s = re.sub(' *&#x000A;', "\n", s)
+	s = re.sub('\n\s*\n+', "<br><br>", s)
+	s = re.sub('<pre>|</pre>', "", s)
+	return "<tt>"+s+"</tt>"
 # Parse upload cables
 subject_re  = re.compile(
 		".*Subject:\s*((?:[^\n]+\n){1,6})\n*",
@@ -281,7 +317,7 @@ def parse_and_upload_cable(path):
 		subject = search.group(1)
 		subject = subject.replace('\n', ' ')
 	if not subject:
-		print part2.contents
+		#print part2.contents
 		subject = reference_id
 	subject = re.sub(subject_re_sub, '', subject)
 	if subject.isupper():
@@ -333,7 +369,7 @@ def parse_and_upload_cable(path):
 	post_cats.append(classification)
 	post = {
 			'title': subject,
-			'description': support+str(part1)+str(part2),
+			'description': support+str(part1)+fmt(str(part2)),
 			'dateCreated': created_time,
 			'categories': post_cats,
 			'mt_allow_pings': 1,
