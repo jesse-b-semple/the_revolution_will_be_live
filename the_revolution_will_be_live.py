@@ -233,18 +233,18 @@ def download_all_cables():
 				open(path, 'w').write(html)
 			
 # Parse upload cables
-subject_re  = re.compile(".*(SUBJECT|Subject):\s*([^\n]*)", 
-		re.MULTILINE | re.DOTALL)
-ref_re      = re.compile(".*(REF|Ref):\s*([^\n]*)", 
-		re.MULTILINE | re.DOTALL)
-ref_re_simp = re.compile("REF:|Ref:", re.MULTILINE | re.DOTALL)
+subject_re  = re.compile(
+		".*Subject:\s*((?:[^\n]+\n){1,6})\n*",
+		re.MULTILINE |  re.IGNORECASE | re.DOTALL) 
+subject_re_sub = re.compile("(REF|Classified By):.*$",
+		re.MULTILINE |  re.IGNORECASE | re.DOTALL) 
 tags_re     = re.compile('TAGS:|Tags:')
 tags2a_re   = re.compile('TAGS')
 tags2b_re   = re.compile(".*TAGS\s+([^\n]*)", re.MULTILINE | re.DOTALL)
 tags_link_re = re.compile('tag/')
 def parse_and_upload_cable(path):
 	html = open(path).read()
-	html = re.sub('&#x000A;', "\n", html)
+	html = re.sub('\s*\&\#x000A\;', "\n", html)
 	try:
 		soup = BeautifulSoup.BeautifulSoup(html)
 	except Exception, err:
@@ -277,17 +277,16 @@ def parse_and_upload_cable(path):
 	subject = ""
 	search = part2.find(text=subject_re)
 	if search:
-		search = re.sub('&#x000A;', "\n", search.string)
 		search = subject_re.match(search)
-		subject = reference_id +": "+ search.group(2)
+		subject = search.group(1)
+		subject = subject.replace('\n', ' ')
 	if not subject:
+		print part2.contents
 		subject = reference_id
+	subject = re.sub(subject_re_sub, '', subject)
+	if subject.isupper():
+		subject = subject.title()
 
-	ref = ""
-	search = part2.find(text=ref_re_simp)
-	if search:
-		ref = re.sub('&#x000A;', "\n", search.string)
-		ref = ref_re.match(ref).group(2)
 	# Tags can somtimes be referenced with "TAGS:" and links and
 	# in rare cases with "TAGS" without links
 	tags = []
@@ -340,8 +339,10 @@ def parse_and_upload_cable(path):
 			'mt_allow_pings': 1,
 			'mt_keywords': keywords,
 			}
+
+
 	id = blog.new_post(post, 1, blogid)
-	print "post id:",id
+	print "post id:%s\t%s"%(id,subject)
 
 def upload_cables():
 	print "Parsing and uploading new cables"
@@ -410,8 +411,8 @@ def prep_blog():
 	print "getting index of cables already uploaded to blog"
 	for tag in blog.get_tags(blogid):
 		refs_online.update({tag['name']: 1})
-	# check our category exists:
 	cats = blog.get_categories(blogid)
+	# root cats
 	cat_cablegate          = {'name':'Cablegate', 'slug':'cablegate',
 		                      'parent_id': 0, 'description': ''}
 	cat_cablegate_id       = 0
@@ -424,6 +425,7 @@ def prep_blog():
 	cat_classification     = {'name':'Classification', 'slug':'classification',
 		                     'parent_id': 0, 'description': ''}
 	cat_classification_id  = 0
+	# check our category exists:
 	for c in cats:
 		if c['description'] == cat_cablegate['name']:
 			cat_cablegate_id      = c['categoryId']
