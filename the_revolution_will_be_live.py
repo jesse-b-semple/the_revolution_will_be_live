@@ -25,6 +25,7 @@ from getpass import getpass
 import datetime
 import zlib, base64
 import gzip, io
+import copy
 
 cablegateurl = "http://213.251.145.96/cablegate.html"
 cablegateurlroot = '://'.join(urlparse.urlsplit(cablegateurl)[0:2])
@@ -315,8 +316,7 @@ def parse_and_upload_cable(path):
 
 	# Build post 	
 	post_cats = ['Cablegate']
-	keywords = []
-	keywords.append(tags)
+	keywords = copy.deepcopy(tags)
 	keywords.append(reference_id)
 	keywords.append(origin)
 	keywords.append(classification)
@@ -520,9 +520,14 @@ def main():
 	setup_blog()
 	prep_blog()
 	upload_cables()
-
 	
 
 
 if __name__ == "__main__":
-    main()
+	import time
+	#endless loop
+	while True:
+		try:
+			main()
+		except:
+			time.sleep(60)
