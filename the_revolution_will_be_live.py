@@ -526,8 +526,9 @@ def main():
 if __name__ == "__main__":
 	import time
 	#endless loop
-	while True:
-		try:
-			main()
-		except:
-			time.sleep(60)
+	#while True:
+	#	try:
+	#		main()
+	#	except:
+	#		time.sleep(60)
+	main()
