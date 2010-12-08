@@ -530,13 +530,9 @@ def main():
 			setup_blog()
 			prep_blog()
 			upload_cables()
-			if blog:
-				blog.close()
 			print "Finished.\n"
 		except Exception, err:
 			print "\n",err
-			if blog:
-				blog.close()
 
 		if endlessloop:
 			print "Loop."
