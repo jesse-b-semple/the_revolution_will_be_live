@@ -26,6 +26,7 @@ import datetime
 import zlib, base64
 import gzip, io
 import copy
+import time
 
 cablegateurl = "http://213.251.145.96/cablegate.html"
 cablegateurlroot = '://'.join(urlparse.urlsplit(cablegateurl)[0:2])
@@ -40,12 +41,15 @@ proxy        = None
 proxycheck   = False
 indexdir	 = "reldate" # need to match site url directory for index's
 cabledir 	 = "cable"
+endlessloop  = False
+
 def usage():
 	print """%s v%s 
 Report bugs at http://github.com/jesse-b-semple/
 or post it anonymously (perhaps using tor) at:
 	http://pastebin.ca  and add a tag "cablegate"
 I will search for new posts with that tag regularly
+import time
 
 TODO: fix blogger support
 
@@ -68,6 +72,7 @@ Optional:
                 cables/ exclusively.
 -x|--proxy      http proxy (such as Tor)
 -y|--proxycheck Test the proxy settings against check.torproject.org
+-l|--loop       Endlessly loop
 
 Example using tor:
 <cmd> -u jessebsemple -b http://jessebsemple.wordpress.com/xmlrpc.php \\
@@ -93,10 +98,6 @@ cat_cablegate_id=0
 cat_tag_id=0
 cat_embassy_id=0
 cat_classification_id=0
-
-support = '<p><b><a href="%s/support.html">Support Wikileaks</a>, '\
-'<a href="http://couragetoresist.org/bradley/">Bradley Manning\'s Freedom</a> '\
-'and the <a href="https://www.eff.org/support">EFF</a></b></p>'
 
 therevolution = 'eJy9Vk1v3DYQvfNXDHJJC+zaQNpDm24N2Gli10VcNDbq9hRQ0uyKWYpUh9TK'\
 '++/7htqNkzhrJEDRo8ThfLx584YLS63w8ucnbc798+PjcRyPGuv8tovZxXBU'\
@@ -133,6 +134,7 @@ header = '<b>Dec 19th, cableleaksweap day</b><br>Get a <a '\
 'href="http://github.com/jesse-b-semple/the_revolution_will_be_live">'\
 'copy of this code</a> and upload the cablegate files to a blog of your'\
 'choice on that day<br><br>'
+support = ""
 
 def get_url(url):
 	opener = urllib.urlopen(url, data=None, proxies=proxy)
@@ -345,6 +347,7 @@ def parse_and_upload_cable(path):
 			'categories': post_cats,
 			'mt_allow_pings': 1,
 			'mt_keywords': keywords,
+			'wp_slug': reference_id
 			}
 
 
@@ -460,16 +463,16 @@ def prep_blog():
 
 def main():
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "hu:p:b:t:i:c:x:y", ["help"
+		opts, args = getopt.getopt(sys.argv[1:], "hu:p:b:t:i:c:x:yl", ["help"
 			"user=", 'password=', 'blogrpc=', 'blogtype=', 'blogid=', 
-			'cablegate=', 'proxy=',  'proxycheck'])
+			'cablegate=', 'proxy=',  'proxycheck', 'loop'])
 	except getopt.GetoptError, err:
 		print str(err) 
 		usage()
 		sys.exit(2)
 	global user, password, blogrpcurl, blogtype, bloggetlist
 	global blogid, cablegateurl, cablegateurlroot, proxyurl, proxy
-	global proxycheck
+	global proxycheck, blog, support, endlessloop
 	for o, a in opts:
 		if o in ("-h", "--help"):
 			usage()
@@ -498,6 +501,8 @@ def main():
 			proxy = {'http': proxyurl}
 		elif o in ("-y", "--proxycheck"):
 			proxycheck = True	
+		elif o in ("-l", "--loop"):
+			endlessloop = True	
 		else:
 			assert False, "unhandled option"
 	if not blogrpcurl:
@@ -507,28 +512,39 @@ def main():
 	if not password:
 		password     = getpass("password: ")
 		
+	supporturl = urlparse.urljoin(cablegateurlroot, "support.html")
+	support = '<p><b><a href="'+supporturl+'">Support Wikileaks</a>, '\
+	'<a href="http://couragetoresist.org/bradley/">Bradley Manning\'s Freedom</a> '\
+	'and the <a href="https://www.eff.org/support">EFF</a></b></p>'
+
 	#begin 
-	if proxy and proxycheck:
-		check_proxy()
+	while True:
+		try:
+			if proxy and proxycheck:
+				check_proxy()
+			if bloggetlist:
+				list_blogs()
+			if cablegateurl:
+				download_all_index_pages()
+				download_all_cables()
+			setup_blog()
+			prep_blog()
+			upload_cables()
+			if blog:
+				blog.close()
+			print "Finished.\n"
+		except Exception, err:
+			print "\n",err
+			if blog:
+				blog.close()
 
-	if bloggetlist:
-		list_blogs()
-
-	if cablegateurl:
-		download_all_index_pages()
-		download_all_cables()
-	setup_blog()
-	prep_blog()
-	upload_cables()
+		if endlessloop:
+			print "Loop."
+			time.sleep(10)
+		else:
+			break
 	
 
 
 if __name__ == "__main__":
-	import time
-	#endless loop
-	#while True:
-	#	try:
-	#		main()
-	#	except:
-	#		time.sleep(60)
 	main()
