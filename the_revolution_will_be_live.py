@@ -42,7 +42,6 @@ proxycheck   = False
 indexdir	 = "reldate" # need to match site url directory for index's
 cabledir 	 = "cable"
 endlessloop  = False
-
 def usage():
 	print """%s v%s 
 Report bugs at http://github.com/jesse-b-semple/
@@ -72,7 +71,6 @@ Optional:
                 cables/ exclusively.
 -x|--proxy      http proxy (such as Tor)
 -y|--proxycheck Test the proxy settings against check.torproject.org
--l|--loop       Endlessly loop
 
 Example using tor:
 <cmd> -u jessebsemple -b http://jessebsemple.wordpress.com/xmlrpc.php \\
@@ -146,7 +144,6 @@ def get_url(url):
 		return gzip.GzipFile(fileobj=bytestream, mode="rb").read()
 	else:
 		return data
-
 def check_proxy():
 	print "Verifying proxy"
 	print "IP without proxy:",
@@ -366,20 +363,13 @@ def upload_cables():
 title_to_ref_re = re.compile("^([^\:]+):")
 refs_online = {}
 def setup_blog():
-	print "Connecting to blog"
 	global blog, blogid
-	try:
-		if proxyurl:
-			blog = pyblog.WordPress(blogrpcurl, user, password, 
-					urlparse.urlparse(proxyurl)[1])
-		else:
-			blog = pyblog.WordPress(blogrpcurl, user, password)
-	except Exception, err:
-		print "Error connecting to blog. If using a proxy,"
-		print "Try again or help us improve the code few."
-		print
-		print str(err)
-		sys.exit(2)
+	print "Connecting to blog"
+	if proxyurl:
+		blog = pyblog.WordPress(blogrpcurl, user, password, 
+				urlparse.urlparse(proxyurl)[1])
+	else:
+		blog = pyblog.WordPress(blogrpcurl, user, password)
 
 def list_blogs():
 	print "Blog ID's available:"
@@ -391,7 +381,7 @@ def list_blogs():
 	sys.exit(2)
 
 def prep_blog():
-	global cat_cablegate_id, cat_tag_id, cat_embassy_id, cat_classification_id
+	global cat_cablegate_id, cat_tag_id, cat_embassy_id, cat_classification_id, blog
 	# Upload code to blog page
 	code = open(sys.argv[0]).read()
 	code = code.replace('&', '&amp;')
@@ -472,7 +462,7 @@ def main():
 		sys.exit(2)
 	global user, password, blogrpcurl, blogtype, bloggetlist
 	global blogid, cablegateurl, cablegateurlroot, proxyurl, proxy
-	global proxycheck, blog, support, endlessloop
+	global proxycheck, support, endlessloop
 	for o, a in opts:
 		if o in ("-h", "--help"):
 			usage()
@@ -517,30 +507,30 @@ def main():
 	'<a href="http://couragetoresist.org/bradley/">Bradley Manning\'s Freedom</a> '\
 	'and the <a href="https://www.eff.org/support">EFF</a></b></p>'
 
+	"""
+	if proxy and proxycheck:
+		check_proxy()
+	if bloggetlist:
+		list_blogs()
+	if cablegateurl:
+		download_all_index_pages()
+		download_all_cables()
+	setup_blog()
+	prep_blog()
+	upload_cables()
+	print "Finished.\n"
+	"""
 	#begin 
-	while True:
-		try:
-			if proxy and proxycheck:
-				check_proxy()
-			if bloggetlist:
-				list_blogs()
-			if cablegateurl:
-				download_all_index_pages()
-				download_all_cables()
-			setup_blog()
-			prep_blog()
-			upload_cables()
-			print "Finished.\n"
-		except Exception, err:
-			print "\n",err
-
-		if endlessloop:
-			print "Loop."
-			time.sleep(10)
-		else:
-			break
-	
-
+	if proxy and proxycheck:
+		check_proxy()
+	if bloggetlist:
+		list_blogs()
+	if cablegateurl:
+		download_all_index_pages()
+		download_all_cables()
+	setup_blog()
+	prep_blog()
+	upload_cables()
 
 if __name__ == "__main__":
 	main()
