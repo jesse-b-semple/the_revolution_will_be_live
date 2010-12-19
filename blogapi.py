@@ -79,6 +79,7 @@ class Blog(object):
             self.server         = xmlrpclib.ServerProxy(serverapi, self.proxytransport)
         else: 
             self.server         = xmlrpclib.ServerProxy(serverapi)
+        #self.server._ServerProxy__verbose = 1
         self.list_methods()
 
     def list_methods(self):

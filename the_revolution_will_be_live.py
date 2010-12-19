@@ -42,6 +42,10 @@ proxycheck   = False
 indexdir	 = "reldate" # need to match site url directory for index's
 cabledir 	 = "cable"
 endlessloop  = False
+updatestatus   = False
+statuspost_id  = -1
+cablestotal    = 0
+cablesuploaded = 0
 def usage():
 	print """%s v%s 
 Report bugs at http://github.com/jesse-b-semple/
@@ -54,23 +58,27 @@ TODO: fix blogger support
 
 USAGE:
 
--u|--user       Blog user
--p|--password   Blog password (not recommended, will request
-                from prompt instead)
--b|--blogrpc    XMLRPC for users blog
+-u|--user <user>          Blog user
+-p|--password <password>  Blog password (not recommended, will request
+                          from prompt instead)
+-b|--blogrpc <url>     XMLRPC for users blog
 Optional:
--t|--blogtype   "wordpress" or "blogger". Might support others
-                Default: wordpress
--i|--blogid     Blog ID if user has multiple blogs. 
-                Default: 0 (root blog). 
-                Set to "list" to see list of blogs.
--c|--cablegate  The URL of the Wikileaks Cablegate website/index
-                Default: %s
-                Set to "skip" to skip checking wikileaks for 
-                updated cables. This will use the cables in
-                cables/ exclusively.
--x|--proxy      http proxy (such as Tor)
--y|--proxycheck Test the proxy settings against check.torproject.org
+-t|--blogtype <type>   "wordpress" or "blogger". Might support others
+                       Default: wordpress
+-i|--blogid <id>       Blog ID if user has multiple blogs. 
+                       Default: 0 (root blog). 
+                       Set to "list" to see list of blogs.
+-c|--cablegate <url>   The URL of the Wikileaks Cablegate website/index
+                       Default: %s
+                       Set to "skip" to skip checking wikileaks for 
+                       updated cables. This will use the cables in
+                       cables/ exclusively.
+-x|--proxy <proxyurl>  http proxy (such as Tor)
+-y|--proxycheck        Test the proxy settings against check.torproject.org
+-s|--statuspost <id>   Update with a "last updated" status. If <id>
+                       is provided the status will be appended to the post
+					   with that <id>. If <id> == "new" a new post will be 
+					   created.
 
 Example using tor:
 <cmd> -u jessebsemple -b http://jessebsemple.wordpress.com/xmlrpc.php \\
@@ -134,8 +142,14 @@ header = '<b>Dec 19th, cableleaksweap day</b><br>Get a <a '\
 'choice on that day<br><br>'
 support = ""
 
+from urllib import FancyURLopener
+class MyOpener(FancyURLopener, object):
+    version = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11'
 def get_url(url):
-	opener = urllib.urlopen(url, data=None, proxies=proxy)
+	o = MyOpener()
+	o.proxies=proxy
+	opener = o.open(url, data=None)
+	#opener = urllib.urlopen(url, data=None, proxies=proxy)
 	data = opener.read()
 	encoding = opener.headers.get('content-encoding',0)
 	opener.close()
@@ -202,7 +216,6 @@ def download_all_index_pages():
 		os.mkdir(indexdir)
 	if not os.path.exists(cabledir):
 		os.mkdir(cabledir)
-	#html  = urllib.urlopen(cablegateurl, proxies=proxy)
 	html  = get_url(cablegateurl)
 	soup  = BeautifulSoup.BeautifulSoup(html)
 	urls  = soup.findAll('a', {'href': re.compile(indexdir+'/.+')})
@@ -352,12 +365,16 @@ def parse_and_upload_cable(path):
 	print "post id:%s\t%s"%(id,subject)
 
 def upload_cables():
+	global cablestotal, cablesuploaded
 	print "Parsing and uploading new cables"
 	for root, dirs, files in os.walk(cabledir):
 		for file in files:
-			if file[-5:] == '.html' and not refs_online.has_key(file[:-5]):
-				print "uploading cable: %s"%os.path.join(root, file),
-				parse_and_upload_cable(os.path.join(root, file))
+			if file[-5:] == '.html':
+				cablestotal += 1
+				if not refs_online.has_key(file[:-5]):
+					print "uploading cable: %s"%os.path.join(root, file),
+					parse_and_upload_cable(os.path.join(root, file))
+					cablesuploaded += 1
 
 # Setup blog connection
 title_to_ref_re = re.compile("^([^\:]+):")
@@ -449,20 +466,49 @@ def prep_blog():
 		print "creating '%s' category"%cat_tag['name']
 		cat_tag_id = blog.new_category(cat_tag, blogid)
 
+def update_status():
+	curtime = datetime.datetime.utcfromtimestamp(time.time())
+	curgmtime = curtime.strftime( "%h %d %Y %H:%M-UTC")
+	print "Updating status page"
+	#global blog
+	#blog.server._ServerProxy__verbose = 1
+	status_re = re.compile('<p>Last updated \S+ \d+ \d+ \d+:\d+-UTC with \d+ cables total</p>')
+	status_new = '<p>Last updated %s with %d cables total</p>'%(curgmtime,
+															cablestotal) 
+	if statuspost_id >= 0:
+		post = blog.get_post(statuspost_id)
+		if post:
+			if re.search(status_re, post['description']):
+				post['description'] = re.sub(status_re, status_new, 
+												post['description'])
+			else:
+				post['description'] += status_new
+			post['dateCreated'] = curgmtime
+			blog.edit_post(statuspost_id, post, 1)
+	else:
+		post = {
+				'title': "Cablegate Update Status",
+				'description': status_new,
+				#'dateCreated': curgmtime,
+				'categories': ['Cablegate'],
+				'mt_allow_pings': 1,
+				'wp_slug': 'status' 
+				}
+		blog.new_post(post, 1, blogid)
 
 
 def main():
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "hu:p:b:t:i:c:x:yl", ["help"
+		opts, args = getopt.getopt(sys.argv[1:], "hu:p:b:t:i:c:x:yls:", ["help"
 			"user=", 'password=', 'blogrpc=', 'blogtype=', 'blogid=', 
-			'cablegate=', 'proxy=',  'proxycheck', 'loop'])
+			'cablegate=', 'proxy=',  'proxycheck', 'loop', 'statuspost='])
 	except getopt.GetoptError, err:
 		print str(err) 
 		usage()
 		sys.exit(2)
 	global user, password, blogrpcurl, blogtype, bloggetlist
 	global blogid, cablegateurl, cablegateurlroot, proxyurl, proxy
-	global proxycheck, support, endlessloop
+	global proxycheck, support, endlessloop, updatestatus, statuspost_id
 	for o, a in opts:
 		if o in ("-h", "--help"):
 			usage()
@@ -491,6 +537,10 @@ def main():
 			proxy = {'http': proxyurl}
 		elif o in ("-y", "--proxycheck"):
 			proxycheck = True	
+		elif o in ("-s", "--statuspost"):
+			updatestatus = True
+			if a != "new":
+				statuspost_id = int(a)
 		elif o in ("-l", "--loop"):
 			endlessloop = True	
 		else:
@@ -528,9 +578,19 @@ def main():
 	if cablegateurl:
 		download_all_index_pages()
 		download_all_cables()
-	setup_blog()
+	# the most common point where connection fails:
+	while True:
+		try:
+			setup_blog()
+			break
+		except Exception, err:
+			print err
+			continue
+		
 	prep_blog()
 	upload_cables()
+	if cablesuploaded > 0 and updatestatus:
+		update_status()
 
 if __name__ == "__main__":
 	main()
