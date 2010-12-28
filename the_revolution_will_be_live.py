@@ -147,7 +147,8 @@ class MyOpener(FancyURLopener, object):
     version = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11'
 def get_url(url):
 	o = MyOpener()
-	o.proxies=proxy
+	if proxy:
+		o.proxies=proxy
 	opener = o.open(url, data=None)
 	#opener = urllib.urlopen(url, data=None, proxies=proxy)
 	data = opener.read()
